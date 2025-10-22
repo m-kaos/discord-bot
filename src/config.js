@@ -43,7 +43,6 @@ module.exports = {
   // Add channel IDs here where the bot should actively respond to all messages
   // The bot will also respond when @mentioned or when its name is used in any channel
   chatChannels: [
-    // Example: '1234567890123456789',
-    // Add your channel IDs here after deployment
+    // Channel removed - bot only responds when @mentioned or name is used
   ],
 };
