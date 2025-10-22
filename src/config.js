@@ -32,9 +32,18 @@ const birthdays = [
 
 module.exports = {
   birthdays,
+
   // Bot settings
   settings: {
     checkBirthdaysAt: '00:00', // Time to check birthdays (HH:mm format, 24-hour)
     birthdayMessage: (name) => `🎉🎂 **HAPPY BIRTHDAY ${name.toUpperCase()}!** 🎂🎉\n\nHave an amazing day! 🥳`,
-  }
+  },
+
+  // AI Chat settings
+  // Add channel IDs here where the bot should actively respond to all messages
+  // The bot will also respond when @mentioned or when its name is used in any channel
+  chatChannels: [
+    // Example: '1234567890123456789',
+    // Add your channel IDs here after deployment
+  ],
 };
