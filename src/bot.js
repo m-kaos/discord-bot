@@ -100,5 +100,12 @@ if (!process.env.GUILD_ID) {
 logger.info('Starting Discord bot...');
 client.login(process.env.DISCORD_TOKEN);
 
+// Start the API server after bot initialization
+// This ensures bot and API share the same memory space for cache access
+client.once('ready', () => {
+  logger.info('Bot ready, starting API server...');
+  require('./api');
+});
+
 // Export client for API usage
 module.exports = client;
