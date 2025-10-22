@@ -1,0 +1,33 @@
+{
+  "name": "shitfucks-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord bot for Shit Fucks squad - tracks members, voice activity, and sends birthday notifications",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js",
+    "dev": "nodemon src/bot.js",
+    "test": "node src/bot.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "discord.js",
+    "api"
+  ],
+  "author": "Shit Fucks Squad",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "express": "^4.18.2",
+    "dotenv": "^16.4.1",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.1.5",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
