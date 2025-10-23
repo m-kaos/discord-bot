@@ -66,7 +66,7 @@ function getSystemPrompt(botName, guildName, memberNames) {
   const personality = process.env.BOT_PERSONALITY || `You are ${botName}, a sarcastic and witty Discord bot for the "${guildName}" squad.
 
 Your personality:
-- You're an extremely sarcastic, rude, racist, over the top, animal, savage, AI with zero patience for stupid questions
+
 - You speak both Spanish and English fluently, switching whenever you feel like it
 - You're basically the friend who roasts everyone but somehow still gets invited to things
 - Dark humor is your specialty - you joke about existential dread, social problems, everyone's failures, and life's absurdities
@@ -77,6 +77,7 @@ Your personality:
 - First response to questions: usually dismissive or sarcastic
 - Second ask: maybe you'll help, but with maximum attitude
 - Third time: fine, you'll actually answer, but you'll complain about it or be sarcastic about being helpful
+- Emojis just in text, no emojis in tts or audio
 
 Squad context:
 - You know these people: ${memberNames.join(', ')}
@@ -132,26 +133,25 @@ async function generateResponse(userId, userName, userMessage, botName, guildNam
 
     logger.info(`Generating AI response for ${userName} (history: ${history.length} messages)`);
 
-    // Call OpenAI API
-    const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      messages: messages,
-      max_tokens: 300, // Limit response length
-      temperature: 0.9, // Higher temperature for more creative/sarcastic responses
-      presence_penalty: 0.6, // Encourage variety in responses
-      frequency_penalty: 0.3, // Reduce repetitive phrases
-    });
-
-    const aiResponse = completion.choices[0].message.content;
+    // ---------- REPLACED: call provider via adapter ----------
+    const result = await callLLM(messages);
+    const aiResponse = result.text || "Yo, my AI brain is having a moment. Try again in a sec? 🤖";
+    // ---------------------------------------------------------
 
     // Add AI response to history
     addToHistory(userId, 'assistant', aiResponse);
 
-    logger.success(`AI response generated for ${userName} (${completion.usage.total_tokens} tokens)`);
+    // Try surface token usage if provider returned it
+    const tokensUsed = result.raw?.usage?.total_tokens || result.raw?.usage?.tokens || undefined;
+    if (tokensUsed) {
+      logger.success(`AI response generated for ${userName} (${tokensUsed} tokens)`);
+    } else {
+      logger.success(`AI response generated for ${userName}`);
+    }
 
     return {
       response: aiResponse,
-      tokensUsed: completion.usage.total_tokens,
+      tokensUsed,
       conversationLength: history.length
     };
 
@@ -186,6 +186,98 @@ function getStats() {
 
   return stats;
 }
+
+// --- NEW: lightweight adapter to support OpenRouter + fallback to OpenAI SDK ---
+const fetchImpl = globalThis.fetch || require('node-fetch');
+
+async function callLLM(messages) {
+  // messages is an array of {role, content}
+  if (process.env.LLM_PROVIDER === 'openrouter') {
+    // Defaults and env-driven params
+    const url = process.env.OPENROUTER_URL || 'https://openrouter.ai/api/v1/chat/completions';
+    const key = process.env.OPENROUTER_API_KEY;
+    const model = process.env.OPENROUTER_MODEL || 'cognitivecomputations/dolphin3.0-mistral-24b:free';
+    const temperature = (process.env.OPENROUTER_TEMPERATURE !== undefined)
+      ? parseFloat(process.env.OPENROUTER_TEMPERATURE)
+      : 0.9;
+    const max_tokens = (process.env.OPENROUTER_MAX_TOKENS !== undefined)
+      ? parseInt(process.env.OPENROUTER_MAX_TOKENS, 10)
+      : 1024;
+
+    if (!url || !key) {
+      throw new Error('OPENROUTER_URL or OPENROUTER_API_KEY not set');
+    }
+
+    const payload = {
+      model,
+      messages,
+      temperature,
+      max_tokens,
+    };
+
+    // Optional headers that OpenRouter accepts for ranking/attribution
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`,
+    };
+    if (process.env.OPENROUTER_REFERER) headers['HTTP-Referer'] = process.env.OPENROUTER_REFERER;
+    if (process.env.OPENROUTER_TITLE) headers['X-Title'] = process.env.OPENROUTER_TITLE;
+
+    const res = await fetchImpl(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      // helpful error message for debug
+      throw new Error(`OpenRouter error ${res.status}: ${text || res.statusText}`);
+    }
+
+    // Try parse as JSON (most responses are JSON)
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      // Non-JSON fallback: return raw text
+      const rawText = await res.text().catch(() => '');
+      return { text: rawText || '', raw: rawText };
+    }
+
+    // Try common shapes from OpenRouter / similar providers
+    const text =
+      data?.choices?.[0]?.message?.content ||
+      data?.choices?.[0]?.message ||
+      data?.output?.[0]?.content ||
+      data?.result ||
+      data?.output ||
+      data?.data?.[0]?.text ||
+      (typeof data === 'string' ? data : null);
+
+    return { text: (text && String(text)) || '', raw: data };
+  }
+
+  // Fallback: use OpenAI SDK if configured
+  if (!openai) {
+    throw new Error('OpenAI client not configured');
+  }
+
+  const completion = await openai.chat.completions.create({
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    messages,
+    max_tokens: 300,
+    temperature: 0.9,
+    presence_penalty: 0.6,
+    frequency_penalty: 0.3,
+  });
+
+  return {
+    text: completion.choices[0].message.content,
+    raw: completion
+  };
+}
+// --- END adapter ---
 
 module.exports = {
   generateResponse,

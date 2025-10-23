@@ -333,6 +333,20 @@ pm2 restart shitfucks-bot
 | `TZ` | No | America/Mexico_City | Timezone for birthday checks |
 | `NODE_ENV` | No | production | Node environment (development/production) |
 
+### OpenRouter LLM (optional)
+If you want the bot to use OpenRouter as the LLM provider, set these variables in your .env:
+
+```env
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_URL=https://openrouter.ai/api/v1/chat/completions   # optional, default provided
+OPENROUTER_MODEL=cognitivecomputations/dolphin3.0-mistral-24b:free  # optional default
+OPENROUTER_TEMPERATURE=0.9     # optional
+OPENROUTER_MAX_TOKENS=1024     # optional
+OPENROUTER_REFERER=https://your.site   # optional - helps OpenRouter rankings
+OPENROUTER_TITLE=YourSiteTitle         # optional - helps OpenRouter rankings
+```
+
 ## Support
 
 For issues or questions, check the logs:
