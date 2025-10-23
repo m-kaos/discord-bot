@@ -21,7 +21,7 @@ cd "$DEPLOY_DIR"
 
 # Pull latest changes from GitHub
 echo "$(date): Pulling latest changes from GitHub..." >> "$LOG_FILE"
-git pull origin main >> "$LOG_FILE" 2>&1
+git pull origin master >> "$LOG_FILE" 2>&1
 
 # Install/update dependencies
 echo "$(date): Installing dependencies..." >> "$LOG_FILE"
