@@ -344,6 +344,71 @@ app.post('/api/webhook/deploy', express.json(), (req, res) => {
   }
 });
 
+/**
+ * POST /api/chat/send
+ * Send a message to Discord channel
+ */
+app.post('/api/chat/send', authenticateApiKey, async (req, res) => {
+  try {
+    const { message, channelId } = req.body;
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message is required and must be a non-empty string',
+      });
+    }
+
+    // Get the bot client
+    const client = require('./bot');
+
+    if (!client || !client.isReady()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Bot is not ready',
+      });
+    }
+
+    // Use provided channelId or default to general channel
+    const targetChannelId = channelId || process.env.DEFAULT_CHAT_CHANNEL_ID || '692163088861888544';
+    const channel = client.channels.cache.get(targetChannelId);
+
+    if (!channel) {
+      return res.status(404).json({
+        success: false,
+        error: 'Channel not found',
+      });
+    }
+
+    if (!channel.isTextBased()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Channel is not a text channel',
+      });
+    }
+
+    // Send the message
+    const sentMessage = await channel.send(message.trim());
+
+    logger.info(`Message sent to #${channel.name}: "${message.trim()}"`);
+
+    res.json({
+      success: true,
+      messageId: sentMessage.id,
+      channelId: channel.id,
+      channelName: channel.name,
+      timestamp: sentMessage.createdAt,
+    });
+
+  } catch (error) {
+    logger.error('Error sending message to Discord:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to send message',
+    });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, error: 'Endpoint not found' });
