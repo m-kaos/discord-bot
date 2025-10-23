@@ -18,6 +18,9 @@
   "license": "MIT",
   "dependencies": {
     "discord.js": "^14.14.1",
+    "@discordjs/voice": "^0.16.1",
+    "@discordjs/opus": "^0.9.0",
+    "sodium-native": "^4.0.4",
     "express": "^4.18.2",
     "dotenv": "^16.4.1",
     "cors": "^2.8.5",

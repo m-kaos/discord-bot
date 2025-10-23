@@ -5,6 +5,7 @@
 
 const logger = require('../utils/logger');
 const { generateResponse } = require('../utils/openaiHandler');
+const { speakInVoice } = require('../utils/ttsHandler');
 const config = require('../config');
 
 module.exports = {
@@ -102,6 +103,25 @@ module.exports = {
         }
 
         logger.success(`Replied to ${message.author.tag}`);
+
+        // If user is in a voice channel, also speak the response via TTS
+        if (message.member && message.member.voice.channel) {
+          logger.info(`User is in voice channel, attempting TTS...`);
+
+          // React to show we're about to speak
+          await message.react('🔊');
+
+          // Speak the response (limit to 200 chars for TTS)
+          const ttsText = response.length > 200
+            ? response.substring(0, 197) + '...'
+            : response;
+
+          const ttsSuccess = await speakInVoice(message.member, ttsText);
+
+          if (!ttsSuccess) {
+            logger.warn('TTS failed, but text response was sent');
+          }
+        }
       }
 
     } catch (error) {
